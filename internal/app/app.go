@@ -15,6 +15,7 @@ const maxBatchSize = 100
 type Config struct {
 	Host  string
 	Token string
+	Mode  string
 }
 
 func Run() error {
@@ -24,7 +25,7 @@ func Run() error {
 	if err != nil {
 		return errors.Wrap(err, "initializing storage")
 	}
-	eventProcessor := tgevents.New(&client, storage)
+	eventProcessor := tgevents.New(&client, storage, config.Mode)
 	consumer := tgconsumer.New(eventProcessor, eventProcessor, maxBatchSize)
 	log.Printf("The bot is running!")
 	return consumer.Start()
@@ -33,9 +34,11 @@ func Run() error {
 func mustConfig() Config {
 	t := flag.String("token", "", "telegram token for runtime")
 	h := flag.String("host", "api.telegram.org", "host for telegram api")
+	m := flag.String("mode", "keeper", "mode for bot: scavenger (delete picked links) and keeper (default)")
 	flag.Parse()
 	return Config{
 		Host:  *h,
 		Token: *t,
+		Mode:  *m,
 	}
 }

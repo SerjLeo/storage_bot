@@ -8,6 +8,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	scavengerMode = "scavenger"
+)
+
 var UnknownEventError = errors.New("unknown event occured")
 
 type Meta struct {
@@ -19,16 +23,18 @@ type Meta struct {
 }
 
 type EventProcessor struct {
-	client  *telegram.Client
-	storage storage.Storage
-	offset  int
+	client      *telegram.Client
+	storage     storage.Storage
+	offset      int
+	isScavenger bool
 }
 
-func New(client *telegram.Client, storage storage.Storage) *EventProcessor {
+func New(client *telegram.Client, storage storage.Storage, mode string) *EventProcessor {
 	return &EventProcessor{
-		client:  client,
-		storage: storage,
-		offset:  0,
+		client:      client,
+		storage:     storage,
+		offset:      0,
+		isScavenger: isScavengerMode(mode),
 	}
 }
 
@@ -102,4 +108,8 @@ func buildMeta(update telegram.Update) Meta {
 		Entities:        update.Message.Entities,
 		CaptionEntities: update.Message.CaptionEntities,
 	}
+}
+
+func isScavengerMode(mode string) bool {
+	return mode == scavengerMode
 }

@@ -10,19 +10,24 @@ import (
 )
 
 const (
-	RndCmd          = "/rnd"
+	PickCmd         = "/pick"
 	HelpCmd         = "/help"
 	StartCmd        = "/start"
+	ListCmd         = "/list"
+	ClearCmd        = "/clear"
 	MsgCmdNotFound  = "Sorry, unknown command. To see the list of commands use /help command."
 	MsgAlreadyExist = "Link is already stored"
 	MsgIsNotUrl     = "Provided link is not url"
 	MsgEmptyUrl     = "Please provide url as command argument"
+	MsgEmptyList    = "You dont have links in your list"
 	MsgSuccess      = "Link successfully saved"
-	MsgNotFound     = "You dont have any stored links"
+	MsgNotFound     = "You dont have any unseen stored links"
+	MsgCleared      = "Seen links cleared"
 	MsgHelp         = `
-	/rnd - pick random saved url
-	/add url - add url to storage
+	/pick - pick random unseen link
 	/help - list of commands
+	/list - list of stored links
+	/clear - clear seen links
 `
 	MsgHello       = "Hi there! \n\n" + MsgHelp
 	EntityTypeLink = "text_link"
@@ -44,8 +49,12 @@ func (p *EventProcessor) doCommand(ctx context.Context, text string, meta Meta) 
 		err = p.client.SendMessage(chatId, MsgHelp)
 	case StartCmd:
 		err = p.client.SendMessage(chatId, MsgHello)
-	case RndCmd:
-		err = p.rndCommand(ctx, chatId, username)
+	case PickCmd:
+		err = p.pickCommand(ctx, chatId, username)
+	case ClearCmd:
+		err = p.clearCommand(ctx, chatId, username)
+	case ListCmd:
+		err = p.listCommand(ctx, chatId, username)
 	default:
 		err = p.client.SendMessage(chatId, MsgCmdNotFound)
 	}
@@ -73,19 +82,54 @@ func (p *EventProcessor) addCommand(ctx context.Context, links []string, chatId 
 	return p.client.SendMessage(chatId, MsgSuccess)
 }
 
-func (p *EventProcessor) rndCommand(ctx context.Context, chatId int, username string) error {
+func (p *EventProcessor) pickCommand(ctx context.Context, chatId int, username string) error {
 	page, err := p.storage.Pick(ctx, username)
 	if err != nil {
-		return errors.Wrap(err, "rnd command")
+		return errors.Wrap(err, "pick command")
 	}
 	if page == nil {
 		return p.client.SendMessage(chatId, MsgNotFound)
 	}
-	err = p.storage.Remove(ctx, page)
+	if p.isScavenger {
+		err = p.storage.Remove(ctx, page)
+		if err != nil {
+			return errors.Wrap(err, "pick command")
+		}
+	}
+	err = p.storage.MarkAsSeen(ctx, page)
 	if err != nil {
-		return errors.Wrap(err, "rnd command")
+		return errors.Wrap(err, "pick command")
 	}
 	return p.client.SendMessage(chatId, page.URL)
+}
+
+func (p *EventProcessor) listCommand(ctx context.Context, chatId int, username string) error {
+	pages, err := p.storage.List(ctx, username)
+	if err != nil {
+		return errors.Wrap(err, "list command")
+	}
+	if len(pages) == 0 {
+		return p.client.SendMessage(chatId, MsgEmptyList)
+	}
+	var b strings.Builder
+	for _, page := range pages {
+		if page.Seen {
+			b.Write([]byte("👀 "))
+		} else {
+			b.Write([]byte("💣 "))
+		}
+		b.Write([]byte(page.URL))
+		b.Write([]byte("\n"))
+	}
+	return p.client.SendMessage(chatId, b.String())
+}
+
+func (p *EventProcessor) clearCommand(ctx context.Context, chatId int, username string) error {
+	err := p.storage.DeleteSeen(ctx, username)
+	if err != nil {
+		return errors.Wrap(err, "clear command")
+	}
+	return p.client.SendMessage(chatId, MsgCleared)
 }
 
 func isUrl(text string) bool {
