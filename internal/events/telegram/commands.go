@@ -23,14 +23,9 @@ const (
 	MsgSuccess      = "Link successfully saved"
 	MsgNotFound     = "You dont have any unseen stored links"
 	MsgCleared      = "Seen links cleared"
-	MsgHelp         = `
-	/pick - pick random unseen link
-	/help - list of commands
-	/list - list of stored links
-	/clear - clear seen links
-`
-	MsgHello       = "Hi there! \n\n" + MsgHelp
-	EntityTypeLink = "text_link"
+	MsgHelp         = "/pick - pick random unseen link\n/list - list of stored links\n/clear - clear seen links\n/help - list of commands"
+	MsgHello        = "Hi there! \n This telegram bot stores links that you send and provides some operations with them\n" + MsgHelp
+	EntityTypeLink  = "text_link"
 )
 
 func (p *EventProcessor) doCommand(ctx context.Context, text string, meta Meta) error {

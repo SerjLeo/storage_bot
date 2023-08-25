@@ -46,7 +46,7 @@ The list of functions, provided by bot:
 
 To build image
 ```shell
-docker build -t storage_bot .
+docker build --platform linux/amd64 -t storage_bot .
 ```
 To run image
 ```shell
