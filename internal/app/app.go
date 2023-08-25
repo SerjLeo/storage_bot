@@ -10,7 +10,11 @@ import (
 	"log"
 )
 
-const maxBatchSize = 100
+const (
+	maxBatchSize = 100
+	defaultHost  = "api.telegram.org"
+	defaultMode  = "keeper"
+)
 
 type Config struct {
 	Host  string
@@ -20,6 +24,9 @@ type Config struct {
 
 func Run() error {
 	config := mustConfig()
+	if config.Token == "" {
+		return errors.New("token is not provided")
+	}
 	client := telegram.New(config.Host, config.Token)
 	storage, err := sqlite.New("./data/sqlite/storage.db")
 	if err != nil {
@@ -33,8 +40,8 @@ func Run() error {
 
 func mustConfig() Config {
 	t := flag.String("token", "", "telegram token for runtime")
-	h := flag.String("host", "api.telegram.org", "host for telegram api")
-	m := flag.String("mode", "keeper", "mode for bot: scavenger (delete picked links) and keeper (default)")
+	h := flag.String("host", defaultHost, "host for telegram api")
+	m := flag.String("mode", defaultMode, "mode for bot: scavenger (delete seen links) and keeper (default)")
 	flag.Parse()
 	return Config{
 		Host:  *h,

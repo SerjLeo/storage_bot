@@ -1,15 +1,18 @@
-FROM golang as builder
+FROM golang:1.20-alpine3.16 as builder
 
-WORKDIR app
+RUN apk update && apk add --no-cache gcc musl-dev
 
-COPY . .
+COPY . /github.com/SerjLeo/storage_bot/
+WORKDIR /github.com/SerjLeo/storage_bot/
 
-RUN "go build -o 'bin' cmd/bot/main"
+RUN go mod download && go get -u ./...
+RUN CGO_ENABLED=1 go build -o "bin/main" cmd/bot/main.go
 
-FROM alpine as runner
+FROM alpine:3.16 as runner
 
-WORKDIR app
+WORKDIR /root/
 
-COPY --from=builder ./app/bin bin
+COPY --from=builder /github.com/SerjLeo/storage_bot/bin/main .
+RUN mkdir data && cd data && mkdir sqlite
 
-CMD ["bin", "-token=$TOKEN"]
+ENTRYPOINT ["./main"]
